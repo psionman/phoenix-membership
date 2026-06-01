@@ -1,0 +1,44 @@
+[project]
+name = "members_files"
+version = "0.0.0"
+description = "Clean up Member's files"
+readme = "README.md"
+requires-python = ">=3.13.3"
+
+# include = [
+#     "HISTORY.md",
+#     "src/directors_rota/images/*.png",
+#     "src/directors_rota/images/*.ico",
+#     ]
+
+dependencies = [
+    "dateutils>=0.6.12",
+    "psiutils>=0.2.34",
+    "pygobject>=3.54.2",
+    "ruff>=0.15.15",
+]
+
+[dependency-groups]
+dev = [
+    'pytest',
+    "pytest-mock>=0.0.3",
+#    "freezegun>=1.5.3",
+#   "icecream>=2.1.4",
+]
+
+[build-system]
+requires = ['uv-build']
+build-backend = 'uv_build'
+
+# pyproject.toml
+[tool.ruff]
+line-length = 79
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+disallow_untyped_defs = true
