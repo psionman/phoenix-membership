@@ -1,86 +1,57 @@
-"""ConfigFrame for Phoenix Members Files."""
+# forms/frm_config.py
+"""ConfigFrame for members_files."""
 
+import re
 import tkinter as tk
-from tkinter import ttk, filedialog
 from pathlib import Path
+from tkinter import filedialog, ttk
 
-from psiutils.buttons import ButtonFrame, IconButton
-from psiutils.constants import PAD, Pad
-from psiutils.utilities import window_resize
+from psiutils.constants import PAD, FileTypes
+from psiutils.utilities import restore_geometry, window_resize
 
-from members_files.constants import APP_TITLE
-from members_files.config import read_config, save_config
-import members_files.text as text
+from members_files import logger
+from members_files.buttons import ButtonFrame, IconButton
+from members_files.config import FIELDS, config, save_config
+from members_files.constants import APP_TITLE, DEFAULT_GEOMETRY, DOWNLOADS_DIR
+from members_files.state import state
+from members_files.text import Text
+
+txt = Text()
 
 
-class ConfigFrame():
+class ConfigFrame:
     """
     A configuration dialog for editing application settings.
-
-    This class creates a modal top-level window allowing the user to view
-    and update configuration values such as file paths and other settings.
-
-    Attributes:
-        root (tk.Toplevel): The top-level window for the dialog.
-        parent (ModuleCaller): The calling parent object.
-        config (Config): The loaded configuration object.
-        xxx (tk.StringVar): A Tk variable bound to a configuration value.
-        data_directory (tk.StringVar): Tk variable for the data directory path.
-        button_frame (ButtonFrame): Frame containing Save/Exit buttons.
-
-    Methods:
-        show(): Set up and display the form GUI.
-        _main_frame(master): Build the main content frame.
-        _button_frame(master): Build the frame containing action buttons.
-        _value_changed(): Return True if any config field was modified.
-        _enable_buttons(*args): Enable buttons based on config change.
-        _get_data_directory(*args): Prompt user to select a directory.
-        _save_config(*args): Save changes and exit the dialog.
-        _dismiss(*args): Close the dialog window.
     """
 
     def __init__(self, parent: tk.Frame) -> None:
-        # pylint: disable=no-member)
         self.root = tk.Toplevel(parent.root)
         self.parent = parent
-        self.config = read_config()
+        self.dialog_opened = False
+        self.save_button = None
 
-        # tk variables
-        self.xxx = tk.StringVar(value=self.config.xxx)
-        self.data_directory = tk.StringVar(value=self.config.data_directory)
+        # Assign tk variables and check for changes
+        config.assign_tk_variables(self, FIELDS, self._check_value_changed)
 
-        self.data_directory.trace_add('write', self._enable_buttons)
+        self._show()
 
-        self.show()
-
-    def show(self) -> None:
+    def _show(self) -> None:
         """
         Initialize and display the configuration form GUI.
-
-        This method configures the top-level window, sets up geometry,
-        keybindings, resizability, and embeds the main and button frames.
-        It also includes a sizegrip widget for manual resizing.
-
-        Keybindings:
-            - Ctrl+X: Close the dialog.
-            - Ctrl+S: Save configuration and exit.
-            - <Configure>: Trigger window size persistence on resize.
-
-        Layout:
-            - A main frame with form fields.
-            - A button frame with Save and Exit buttons.
-            - A sizegrip for resizing support.
         """
-        # pylint: disable=no-member)
         root = self.root
-        root.geometry(self.config.geometry[Path(__file__).stem])
+        restore_geometry(root, state, __file__, default=DEFAULT_GEOMETRY)
         root.transient(self.parent.root)
-        root.title(f'{APP_TITLE} - {text.CONFIG}')
+        root.title(f"{APP_TITLE} - {txt.CONFIG}")
 
-        root.bind('<Control-x>', self._dismiss)
-        root.bind('<Control-s>', self._save_config)
-        root.bind('<Configure>',
-                  lambda event, arg=None: window_resize(self, __file__))
+        root.bind("<Control-x>", self._dismiss)
+        root.bind("<Control-s>", self._save_config)
+        root.bind(
+            "<Configure>",
+            lambda e: window_resize(root, __file__, state),
+        )
+
+        # root.bind("<FocusIn>", self._set_config)
 
         root.rowconfigure(1, weight=1)
         root.columnconfigure(0, weight=1)
@@ -88,8 +59,9 @@ class ConfigFrame():
         main_frame = self._main_frame(root)
         main_frame.grid(row=0, column=0, sticky=tk.NSEW, padx=PAD, pady=PAD)
         self.button_frame = self._button_frame(root)
-        self.button_frame.grid(row=8, column=0, columnspan=9,
-                               sticky=tk.EW, padx=PAD, pady=PAD)
+        self.button_frame.grid(
+            row=8, column=0, columnspan=9, sticky=tk.EW, padx=PAD, pady=PAD
+        )
 
         sizegrip = ttk.Sizegrip(root)
         sizegrip.grid(sticky=tk.SE)
@@ -97,119 +69,150 @@ class ConfigFrame():
     def _main_frame(self, master: tk.Frame) -> ttk.Frame:
         """
         Create and return the main frame containing form input widgets.
-
-        This frame includes:
-            - A label describing the input field.
-            - An entry widget bound to the data_directory variable.
-            - A button to open a directory selection dialog.
-
-        The frame is configured to allow resizing and proper layout behaviour
-        using row and column weights.
-
-        Args:
-            master (tk.Frame): The parent widget to contain the frame.
-
-        Returns:
-            ttk.Frame: The constructed main frame with input controls.
         """
         frame = ttk.Frame(master)
-        frame.rowconfigure(0, weight=1)
         frame.columnconfigure(1, weight=1)
 
         row = 0
-        label = ttk.Label(frame, text='xxx')
+        label = ttk.Label(frame, text="Members File")
         label.grid(row=row, column=0, sticky=tk.E, padx=PAD, pady=PAD)
 
-        entry = ttk.Entry(frame, textvariable=self.data_directory)
+        entry = ttk.Entry(frame, textvariable=self.members_file)
         entry.grid(row=row, column=1, sticky=tk.EW)
 
         button = IconButton(
-            frame, text.OPEN, 'open', self._get_data_directory)
-        button.grid(row=row, column=2, padx=Pad.W)
+            frame, txt.BROWSE, "file-find-outline", self._get_members_file
+        )
+        button.grid(row=row, column=2, padx=PAD, pady=PAD)
+
+        row += 1
+        label = ttk.Label(frame, text="Include File")
+        label.grid(row=row, column=0, sticky=tk.E, padx=PAD)
+
+        entry = ttk.Entry(frame, textvariable=self.include_list_file)
+        entry.grid(row=row, column=1, sticky=tk.EW)
+
+        button = IconButton(
+            frame, txt.BROWSE, "file-find-outline", self._get_include_file
+        )
+        button.grid(row=row, column=2, padx=PAD, pady=PAD)
+
+        row += 1
+        label = ttk.Label(frame, text="BBO names file")
+        label.grid(row=row, column=0, sticky=tk.E, padx=PAD)
+
+        entry = ttk.Entry(frame, textvariable=self.bbo_names_file)
+        entry.grid(row=row, column=1, sticky=tk.EW)
+
+        button = IconButton(
+            frame, txt.BROWSE, "file-find-outline", self._get_bbo_names_file
+        )
+        button.grid(row=row, column=2, padx=PAD, pady=PAD)
 
         return frame
 
     def _button_frame(self, master: tk.Frame) -> tk.Frame:
-        """
-        Create and return the button frame for the form.
-
-        This frame contains two buttons:
-            - 'Save' to store the current configuration and exit.
-            - 'Exit' to close the window without saving changes.
-
-        The buttons are initially disabled and will be enabled based on user
-        interaction. The frame is laid out horizontally.
-
-        Args:
-            master (tk.Frame): The parent widget that will contain the frame.
-
-        Returns:
-            tk.Frame: The constructed frame containing the control buttons.
-        """
         frame = ButtonFrame(master, tk.HORIZONTAL)
-        frame.buttons = [
-            frame.icon_button('save', self._save_config, True),
-            frame.icon_button('exit', self._dismiss),
-        ]
-        frame.enable(False)
+        frame.buttons = self._frame_buttons(frame)
+        self.save_button = frame.get_button("save")
+        frame.disable()
         return frame
 
-    def _value_changed(self) -> bool:
-        # pylint: disable=no-member)
-        """
-        Determine whether any configuration value has changed.
+    def _frame_buttons(self, frame: ButtonFrame) -> list[IconButton]:
+        return [
+            frame.icon_button("save", self._save_config, True, tag="save"),
+            frame.icon_button("exit", self._dismiss),
+        ]
 
-        Compares the current state of the form's variables with the saved
-        configuration to identify changes made by the user.
-
-        Returns:
-            bool: True if at least one value has been altered; False otherwise.
-        """
-        return (
-            self.xxx.get() != self.config.xxx or
-            ...
-        )
-
-    def _enable_buttons(self, *args) -> None:
+    def _check_value_changed(self, *args) -> bool:
         """
         Enable or disable form buttons based on changes in configuration.
-
-        Checks whether any tracked values have changed and enables the form's
-        buttons accordingly to allow the user to save or exit.
         """
-        enable = bool(self._value_changed())
+        enable = bool(self._config_changes())
         self.button_frame.enable(enable)
 
-    def _get_data_directory(self, *args) -> None:
+    def _get_members_file(self, *args) -> None:
+        if self.members_file.get():
+            initialdir = Path(self.members_file.get()).parent
+        else:
+            initialdir = DOWNLOADS_DIR
+        path = filedialog.askopenfilename(
+            initialdir=initialdir,
+            parent=self.root,
+            filetypes=FileTypes.CSV.value,
+        )
+        if path:
+            template = re.sub(r"\d{8}", "YYYYMMDD", path)
+            self.members_file.set(template)
+
+    def _get_include_file(self, *args) -> None:
+        if self.include_list_file.get():
+            initialdir = Path(self.include_list_file.get()).parent
+        else:
+            initialdir = DOWNLOADS_DIR
+        path = filedialog.askopenfilename(
+            initialdir=initialdir,
+            parent=self.root,
+            filetypes=FileTypes.TXT.value,
+        )
+        if path:
+            self.include_list_file.set(path)
+
+    def _get_bbo_names_file(self, *args) -> None:
+        if self.bbo_names_file.get():
+            initialdir = Path(self.bbo_names_file.get()).parent
+        else:
+            initialdir = DOWNLOADS_DIR
+        path = filedialog.askopenfilename(
+            initialdir=initialdir,
+            parent=self.root,
+            filetypes=FileTypes.TXT.value,
+        )
+        if path:
+            self.bbo_names_file.set(path)
+
+    def _get_directory(self, default: str) -> str:
         """
         Prompt the user to select a new data directory and update the value.
-
-        Opens a directory selection dialog, and if a valid directory is
-        chosen, updates the corresponding Tkinter variable.
         """
-        data_directory = filedialog.askdirectory(
-            initialdir=Path(self.data_directory.get()),
+        self.dialog_opened = True
+        return filedialog.askdirectory(
+            initialdir=Path(default),
             parent=self.root,
         )
-        if data_directory:
-            self.data_directory.set(data_directory)
 
-    def _save_config(self, *args) -> None:
-        """
-        Save the current configuration and close the application window.
+    def _save_config(self):
+        changes = {
+            field: f"(old value={change[0]}, new_value={change[1]})"
+            for field, change in self._config_changes().items()
+        }
 
-        Updates the configuration with values from the form, writes them to
-        persistent storage, and then closes the config window.
-        """
-        # To generate assignments from tk-vars run script: assignment-invert
-        self.config.update('xxx', self.xxx.get())
-        save_config(self.config)
+        for field in FIELDS:
+            config.update(field, getattr(self, field).get())
+
+        save_config(config)
+        logger.info("Config saved", changes=changes)
+        self.save_button.disable()
         self._dismiss()
+
+    def _config_changes(self) -> dict:
+        stored = config.config
+        return {
+            field: (stored[field], getattr(self, field).get())
+            for field in FIELDS
+            if stored[field] != getattr(self, field).get()
+        }
+
+    def _set_config(self, *args) -> None:
+        if self.dialog_opened:
+            self.dialog_opened = False
+            return
+        for field in FIELDS:
+            getattr(self, field).set(config.config[field])
 
     def _dismiss(self, *args) -> None:
         """
         Close the configuration window and terminate the application.
-
-        Destroys the top-level window associated with the configuration form.
         """
+        self.root.grab_release()
         self.root.destroy()

@@ -1,30 +1,31 @@
 {
-    "python.defaultInterpreterPath": "/home/jeff/projects/members_files/.venv/bin/python",
-    "workbench.colorCustomizations": {
-        "activityBar.activeBackground": "#bbbbbb",
-        "activityBar.background": "#dddddd",
-        "activityBar.foreground": "#000000",
-        "activityBarBadge.background": "#dd5555",
-        "activityBarBadge.foreground": "#ffffff",
-        "statusBar.background": "#dddddd",
-        "statusBar.foreground": "#333333",
-        "statusBarItem.hoverBackground": "#bbbbbb",
-        "titleBar.activeBackground": "#dddddd",
-        "titleBar.activeForeground": "#333333"
+  "python.defaultInterpreterPath": "/home/jeff/projects/members_files/.venv/bin/python",
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#dddddd",
+    "titleBar.activeForeground": "#333333",
+    "titleBar.inactiveBackground": "#bbbbbb",
+    "breadcrumb.foreground": "#33aa33",
+    "activityBar.activeBackground": "#bbbbbb",
+    "activityBar.background": "#dddddd",
+    "activityBar.foreground": "#000000",
+    "activityBarBadge.background": "#dd5555",
+    "activityBarBadge.foreground": "#ffffff",
+    "statusBar.background": "#dddddd",
+    "statusBar.foreground": "#333333",
+    "statusBarItem.hoverBackground": "#bbbbbb",
+  },
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit",
+      "source.fixAll": "explicit",
     },
-    "[python]": {
-        "editor.defaultFormatter": "charliermarsh.ruff",
-        "editor.formatOnSave": true,
-        "editor.formatOnType": true,
-        
-        "editor.codeActionsOnSave": {
-            "source.fixAll.ruff": "explicit",
-            "source.organizeImports.ruff": "explicit",
-            "source.fixAll": "explicit"          // fallback
-        }
-    },
-    // Global linting settings
-    "python.linting.enabled": true,
-    "python.linting.lintOnSave": true,
-    "python.linting.ruffEnabled": true
+  },
+  "python.linting.enabled": true,
+  "python.linting.lintOnSave": true,
+  "python.linting.ruffEnabled": true,
+  "python.languageServer": "None",
 }

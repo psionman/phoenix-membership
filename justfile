@@ -1,8 +1,7 @@
-list:
-    just --list
+package_name := replace(`basename $(pwd)`, "-", "_")
+script := "uv run src/" + package_name + "/main.py"
 
-run arg1="" arg2=""  arg3 = "":
-    uv run src/members_files/main.py {{arg1}} {{arg2}} {{arg3}}
+import '/home/jeff/.config/just/dev-packages.just'
 
-test:
-    uv run -m pytest
+playwright:
+    uv run playwright install chromium

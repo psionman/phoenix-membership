@@ -1,22 +1,49 @@
-"""Main module for Phoenix Members Files."""
+"""Main procedure for package"""
+
 import sys
+import tkinter as tk
 
-from root import Root
+from psiutils.utilities import display_icon
+from psiutils.widgets import get_styles
 
-from psiutils.icecream_init import ic_init
-ic_init()
+from members_files import __app_name__, __version__
+from members_files.constants import APP_TITLE, ICON_FILE
+from members_files.forms.frm_main import AppFrame
+from members_files.module_caller import ModuleCaller
 
-
-def main():
-    Root()
-
-    # Temp code to test data
-    # from temp import Parent
-    # from process import compare
-
-    # compare(Parent())
-    # end temp
+PARSER_ARGS = (
+    ("module", "Module to load"),
+    ("project", "Project name"),
+    ("secondary", "Secondary argument"),
+)
 
 
-if __name__ == '__main__':
+def main() -> None:
+    """Call the Root loop."""
+
+    root = tk.Tk()
+    root.title(APP_TITLE)
+    display_icon(root, ICON_FILE, ignore_error=True)
+
+    root.protocol("WM_DELETE_WINDOW", root.destroy)
+
+    get_styles()
+
+    if PARSER_ARGS:
+        args = ModuleCaller.create_parser(PARSER_ARGS)
+        if args.module:
+            try:
+                ModuleCaller(root, args)
+            except Exception:
+                root.destroy()
+        else:
+            AppFrame(root)
+
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    if "--version" in sys.argv:
+        print(f"{__app_name__}. Version: {__version__}")
+        sys.exit(0)
     main()

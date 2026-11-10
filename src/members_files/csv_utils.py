@@ -3,8 +3,8 @@ from collections import defaultdict
 
 
 def get_dict_from_csv_file(csv_path, key_field) -> tuple[dict, list]:
-    """ Return a csv file as a dict (keyed on the value of key field,
-        where the item is a dict of fields: values)."""
+    """Return a csv file as a dict (keyed on the value of key field,
+    where the item is a dict of fields: values)."""
     csv_list = _get_csv_file_as_list(csv_path)
     (db_fields, fieldnames) = _get_csv_fields(csv_list, key_field)
     data_dict = defaultdict(dict)
@@ -35,13 +35,13 @@ def _get_csv_fields(csv_list, key_field):
 def _get_csv_file_as_list(path) -> list[list]:
     """Return csv file as a list of lists."""
     try:
-        with open(path, 'r', newline='') as f_csv:
+        with open(path, "r", newline="") as f_csv:
             return _list_from_csv(csv.reader(f_csv))
     except UnicodeDecodeError:
-        with open(path, 'r', newline='', encoding='Windows-1252') as f_csv:
+        with open(path, "r", newline="", encoding="Windows-1252") as f_csv:
             return _list_from_csv(csv.reader(f_csv))
     except FileNotFoundError:
-        print(f'File not found: {path}')
+        print(f"File not found: {path}")
     return []
 
 
@@ -49,14 +49,14 @@ def _list_from_csv(items: csv.reader) -> list[list]:
     csv_list = []
     for row in items:
         for index, field in enumerate(row):
-            if ',' in field:
-                row[index] = row[index].replace(',', '')
+            if "," in field:
+                row[index] = row[index].replace(",", "")
         csv_list.append(row)
     return csv_list
 
 
 def write_csv_file(path, fieldnames, items):
-    with open(path, 'w', newline='') as f_csv:
+    with open(path, "w", newline="") as f_csv:
         writer = csv.DictWriter(f_csv, fieldnames=fieldnames)
         writer.writeheader()
         for value in items.values():

@@ -1,13 +1,16 @@
 """Read and write user data file."""
+
 import json
 from pathlib import Path
 
 from constants import USER_DATA_DIR, USER_DATA_FILE
 
 
-class JsonFile():
+class JsonFile:
     """Utility to retrieve and save a json file."""
+
     def __init__(self, path: str, content: dict = None):
+        print(path)
         self.path = path
         if not content:
             content = {}
@@ -16,22 +19,26 @@ class JsonFile():
     def read(self):
         """Set the class's content value if file exists."""
         try:
-            with open(self.path, 'r', encoding='utf8') as f_json:
+            with open(self.path, encoding="utf8") as f_json:
                 self.content = json.load(f_json)
         except FileNotFoundError:
             pass
         except json.decoder.JSONDecodeError:
-            print(f'*** Invalid json in {self.path} ***')
+            print(f"*** Invalid json in {self.path} ***")
 
     def write(self):
         """Write the class's content value."""
         Path(self.path.parent).mkdir(parents=True, exist_ok=True)
-        with open(self.path, 'w', encoding='utf8') as f_json:
+        with open(self.path, "w", encoding="utf8") as f_json:
             json.dump(self.content, f_json)
+
+    def exists(self) -> bool:
+        return self.path.exists()
 
 
 class DataFile(JsonFile):
     """Utility to retrieve and save user data file."""
+
     def __init__(self, content: dict = None):
         path = Path(USER_DATA_DIR, USER_DATA_FILE)
         super().__init__(path, content)

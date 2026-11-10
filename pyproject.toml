@@ -1,18 +1,18 @@
 [project]
 name = "members_files"
 version = "0.0.0"
+authors = [
+    { name = "Jeff Watkins", email = "jeffwatkins2000@gmail.com" },
+]
 description = "Clean up Member's files"
 readme = "README.md"
 requires-python = ">=3.13.3"
 
-# include = [
-#     "HISTORY.md",
-#     "src/directors_rota/images/*.png",
-#     "src/directors_rota/images/*.ico",
-#     ]
-
 dependencies = [
     "dateutils>=0.6.12",
+    "dotenv>=0.9.9",
+    "platformdirs>=4.14.5",
+    "playwright>=1.64.1",
     "psiutils>=0.2.34",
     "pygobject>=3.54.2",
     "ruff>=0.15.15",
@@ -22,8 +22,6 @@ dependencies = [
 dev = [
     'pytest',
     "pytest-mock>=0.0.3",
-#    "freezegun>=1.5.3",
-#   "icecream>=2.1.4",
 ]
 
 [build-system]
@@ -42,3 +40,6 @@ select = ["E", "F", "I", "N", "W", "B", "UP"]
 python_version = "3.11"
 warn_return_any = true
 disallow_untyped_defs = true
+
+[tool.uv.sources]
+psiutils = { path = "../../psi-utilities/psiutils", editable = true }
