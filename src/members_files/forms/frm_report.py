@@ -1,17 +1,17 @@
 """ReportFrame for Phoenix Members Files."""
 
 import tkinter as tk
-from pathlib import Path
 from tkinter import messagebox, ttk
 
-from psiutils.buttons import ButtonFrame, IconButton
 from psiutils.constants import PAD
 from psiutils.treeview import sort_treeview
-from psiutils.utilities import window_resize
+from psiutils.utilities import restore_geometry, window_resize
 
+from members_files.buttons import ButtonFrame, IconButton
 from members_files.config import config
-from members_files.constants import APP_TITLE, DEFAULT_GEOMETRY
+from members_files.constants import APP_TITLE
 from members_files.process import Compare
+from members_files.state import state
 from members_files.text import Text
 
 txt = Text()
@@ -50,10 +50,7 @@ class ReportFrame:
     def show(self) -> None:
         # pylint: disable=no-member)
         root = self.root
-        try:
-            root.geometry(config.geometry[Path(__file__).stem])
-        except KeyError:
-            root.geometry(DEFAULT_GEOMETRY)
+        restore_geometry(root, state, __file__)
         root.transient(self.parent.root)
         root.title(FRAME_TITLE)
 
@@ -80,7 +77,7 @@ class ReportFrame:
         root.update_idletasks()
         root.bind(
             "<Configure>",
-            lambda event, arg=None: window_resize(root, __file__, config),
+            lambda e: window_resize(root, __file__, state),
         )
 
         root.bind("<Control-x>", self._dismiss)
@@ -114,7 +111,7 @@ class ReportFrame:
         self.include_tree.grid(row=row, column=0, sticky=tk.NSEW)
 
         self.copy_include_button = IconButton(
-            frame, txt.COPY, "copy_docs", self._copy_include, True
+            frame, txt.COPY, "copy-clipboard", self._copy_include, True
         )
         self.copy_include_button.grid(row=row, column=1, padx=PAD, sticky=tk.N)
 
@@ -136,7 +133,7 @@ class ReportFrame:
         self.names_tree.grid(row=row, column=0, sticky=tk.NSEW)
 
         self.copy_bbo_button = IconButton(
-            frame, txt.COPY, "copy_docs", self._copy_names, True
+            frame, txt.COPY, "copy-clipboard", self._copy_names, True
         )
         self.copy_bbo_button.grid(row=row, column=1, padx=PAD, sticky=tk.N)
         self.copy_bbo_button.disable()
@@ -157,7 +154,7 @@ class ReportFrame:
         self.duplicate_tree.grid(row=row, column=0, sticky=tk.NSEW)
 
         self.copy_duplicate_button = IconButton(
-            frame, txt.COPY, "copy_docs", self._copy_duplicate, True
+            frame, txt.COPY, "copy-clipboard", self._copy_duplicate, True
         )
         self.copy_duplicate_button.grid(
             row=row, column=1, padx=PAD, sticky=tk.N
@@ -168,11 +165,14 @@ class ReportFrame:
 
     def _button_frame(self, master: tk.Frame) -> tk.Frame:
         frame = ButtonFrame(master, tk.HORIZONTAL)
-        frame.buttons = [
-            frame.icon_button("exit", self._dismiss),
-        ]
+        frame.buttons = self._frame_buttons(frame)
         frame.enable(False)
         return frame
+
+    def _frame_buttons(self, frame: ButtonFrame) -> tk.Frame:
+        return [
+            frame.icon_button("cancel", self._dismiss, tag="exit"),
+        ]
 
     def _get_include_tree(self, master: tk.Frame) -> ttk.Treeview:
         """Return  a tree widget."""
@@ -361,7 +361,6 @@ class ReportFrame:
             self.main_frame.sash_coord(index)
             for index in range(len(config.horizontal_sashes))
         ]
-        config = read_config()
         config.update("horizontal_sashes", horizontal_sashes)
         config.save()
 

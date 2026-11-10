@@ -12,7 +12,9 @@ FIELDS = {
     "bbo_names_file": ConfigField(str, ""),
 }
 
-DEFAULT_CONFIG = {}
+DEFAULT_CONFIG = {
+    "horizontal_sashes": [[1, 291], [1, 401]],
+}
 
 for name, field in FIELDS.items():
     DEFAULT_CONFIG[name] = field.default_value
