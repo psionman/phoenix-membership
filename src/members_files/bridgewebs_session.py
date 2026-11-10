@@ -94,13 +94,6 @@ class BridgeWebsSession:
         page.get_by_role("link", name="Import/Export").click()
         link = page.get_by_text("Download", exact=True)
 
-        # link = page.get_by_role("img", name="Download", exact=True)
-
-        # def handle_dialog(dialog):
-        #     dialog.accept()
-
-        # page.on("dialog", handle_dialog)
-
         with page.expect_download(timeout=30000) as info:
             link.click()
 
