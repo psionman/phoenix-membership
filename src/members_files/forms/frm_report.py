@@ -31,6 +31,7 @@ class ReportFrame:
     def __init__(self, parent: tk.Frame, paths: dict[str, str]) -> None:
         self.root = tk.Toplevel(parent.root)
         self.parent = parent
+        self.paths = paths
         self.comparison = Compare(paths)
         self.include_tree = None
         self.names_tree = None
@@ -39,7 +40,7 @@ class ReportFrame:
 
         duplicates = ""
         if self.comparison.duplicates:
-            bbo_file = self.parent.bbo_names_file.get()
+            bbo_file = self.paths["BBO names"]
             duplicates = f"Duplicates found in {bbo_file}"
 
         # tk variables
@@ -48,10 +49,8 @@ class ReportFrame:
         self.show()
 
     def show(self) -> None:
-        # pylint: disable=no-member)
         root = self.root
         restore_geometry(root, state, __file__)
-        root.transient(self.parent.root)
         root.title(FRAME_TITLE)
 
         root.rowconfigure(0, weight=1)
@@ -102,7 +101,7 @@ class ReportFrame:
         frame.columnconfigure(0, weight=1)
 
         row = 0
-        label = ttk.Label(frame, text="Missing from include")
+        label = ttk.Label(frame, text="Members missing from include")
         label.grid(row=row, column=0, sticky=tk.W, padx=PAD, pady=PAD)
 
         row += 1
@@ -124,7 +123,7 @@ class ReportFrame:
         frame.columnconfigure(0, weight=1)
 
         row = 0
-        label = ttk.Label(frame, text="Missing from bbo_names")
+        label = ttk.Label(frame, text="Members missing from bbo_names")
         label.grid(row=row, column=0, sticky=tk.W, padx=PAD, pady=PAD)
 
         row += 1
@@ -145,7 +144,7 @@ class ReportFrame:
         frame.columnconfigure(0, weight=1)
 
         row = 0
-        label = ttk.Label(frame, text="Duplicates")
+        label = ttk.Label(frame, text="Members duplicated in bbo_names")
         label.grid(row=row, column=0, sticky=tk.W, padx=PAD, pady=PAD)
 
         row += 1
@@ -197,13 +196,21 @@ class ReportFrame:
         return tree
 
     def _populate_include_tree(self) -> None:
+
         self.include_tree.delete(*self.include_tree.get_children())
         if len(self.comparison.missing_from_include) > 0:
             self.copy_include_button.enable()
         else:
             values = ("", "No names missing", "")
             self.include_tree.insert("", "end", values=values)
-        for item in self.comparison.missing_from_include.values():
+
+        missing = dict(
+            sorted(
+                self.comparison.missing_from_include.items(),
+                key=lambda item: item[1].bbo,
+            )
+        )
+        for item in missing.values():
             values = (
                 item.ebu,
                 f"{item.first_name} {item.last_name}",
@@ -212,7 +219,9 @@ class ReportFrame:
             self.include_tree.insert("", "end", values=values)
 
     def _copy_include(self, *args):
-        dlg = messagebox.askyesno("", "Overwrite include file?")
+        dlg = messagebox.askyesno(
+            "", "Overwrite include file?", parent=self.root
+        )
         if not dlg:
             return
 
@@ -224,10 +233,10 @@ class ReportFrame:
             if member.bbo and status == "Member":
                 include.append(member.bbo)
 
-        path = self.parent.bbo_include_file.get()
+        path = self.paths["BBO include"]
         with open(path, "w", encoding="utf8") as f_include:
             f_include.write("\n".join(sorted(include)))
-        self.comparison = Compare(self.parent)
+        self.comparison = Compare(self.paths)
         self._populate_include_tree()
 
     def _get_names_tree(self, master: tk.Frame) -> ttk.Treeview:
@@ -286,10 +295,10 @@ class ReportFrame:
             for member in combined.values()
         ]
 
-        path = self.parent.bbo_names_file.get()
+        path = self.paths["BBO names"]
         with open(path, "w", encoding="utf8") as f_include:
             f_include.write("\n".join(sorted(names)))
-        self.comparison = Compare(self.parent)
+        self.comparison = Compare(self.paths)
         self._populate_names_tree()
 
     def _get_duplicate_tree(self, master: tk.Frame) -> ttk.Treeview:
@@ -366,4 +375,4 @@ class ReportFrame:
 
     def _dismiss(self, *args) -> None:
         self._save_sashes()
-        self.parent.root.destroy()
+        self.root.destroy()

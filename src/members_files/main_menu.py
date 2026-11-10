@@ -11,8 +11,7 @@ from members_files import (
     __version__,
 )
 from members_files.constants import HELP_URI
-
-# from members_files.forms.frm_config import ConfigFrame
+from members_files.forms.frm_config import ConfigFrame
 from members_files.text import Text
 
 txt = Text()
@@ -42,13 +41,14 @@ class MainMenu:
 
     def _file_menu_items(self) -> list:
         return [
+            MenuItem(f"{txt.CONFIG}{txt.ELLIPSIS}", self._show_config_frame),
             MenuItem(txt.EXIT, self._dismiss),
         ]
 
-    # def _show_config_frame(self):
-    #     """Display the config frame."""
-    #     dlg = ConfigFrame(self)
-    #     self.root.wait_window(dlg.root)
+    def _show_config_frame(self):
+        """Display the config frame."""
+        dlg = ConfigFrame(self)
+        self.root.wait_window(dlg.root)
 
     def _help_menu_items(self) -> list:
         return [
