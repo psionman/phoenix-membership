@@ -33,6 +33,7 @@ class ReportFrame:
         self.parent = parent
         self.paths = paths
         self.comparison = Compare(paths)
+        self.comparison.compare()
         self.include_tree = None
         self.names_tree = None
         self.copy_include_button = None
@@ -225,18 +226,8 @@ class ReportFrame:
         if not dlg:
             return
 
-        include = []
-        for member in self.comparison.members_bbo.values():
-            status = ""
-            if member.ebu in self.comparison.members_ebu:
-                status = self.comparison.members_ebu[member.ebu].status
-            if member.bbo and status == "Member":
-                include.append(member.bbo)
-
-        path = self.paths["BBO include"]
-        with open(path, "w", encoding="utf8") as f_include:
-            f_include.write("\n".join(sorted(include)))
-        self.comparison = Compare(self.paths)
+        self.comparison.create_include_from_members()
+        self.comparison.compare()
         self._populate_include_tree()
 
     def _get_names_tree(self, master: tk.Frame) -> ttk.Treeview:
@@ -298,7 +289,7 @@ class ReportFrame:
         path = self.paths["BBO names"]
         with open(path, "w", encoding="utf8") as f_include:
             f_include.write("\n".join(sorted(names)))
-        self.comparison = Compare(self.paths)
+        self.comparison.compare()
         self._populate_names_tree()
 
     def _get_duplicate_tree(self, master: tk.Frame) -> ttk.Treeview:

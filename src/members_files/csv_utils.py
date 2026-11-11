@@ -2,7 +2,7 @@ import csv
 from collections import defaultdict
 
 
-def get_dict_from_csv_file(csv_path, key_field) -> tuple[dict, list]:
+def get_dict_from_csv_file(csv_path: str, key_field: str) -> tuple[dict, list]:
     """Return a csv file as a dict (keyed on the value of key field,
     where the item is a dict of fields: values)."""
     csv_list = _get_csv_file_as_list(csv_path)

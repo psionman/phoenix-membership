@@ -25,10 +25,9 @@ class Compare:
         self.members_bbo = {}  # fist of members from bb_names file
         self.duplicates = {}
         self.bbo_names = []
-        self.duplicate_list = []
-        self._compare()
+        self.duplicates_in_bbo = []
 
-    def _compare(self) -> None:
+    def compare(self) -> None:
         (members, members_fields) = get_dict_from_csv_file(
             self.paths["Membership"], "EBU"
         )
@@ -50,6 +49,8 @@ class Compare:
 
         self.members_bbo = self._get_bbo_names(self.paths["BBO names"])
 
+        # Select all members with a BBO username that are not
+        # in the include_list or bbo_names file
         for ebu, member in self.members_ebu.items():
             if member.bbo and member.status == "Member":
                 if member.bbo not in include_list:
@@ -57,9 +58,9 @@ class Compare:
                 if member.ebu not in self.members_bbo:
                     self.missing_from_bbo[ebu] = self.members_ebu[ebu]
 
-        if self.duplicate_list:
+        if self.duplicates_in_bbo:
             for member in sorted(
-                self.duplicate_list, key=lambda x: x.last_name
+                self.duplicates_in_bbo, key=lambda x: x.last_name
             ):
                 self.duplicates[member.ebu] = member
 
@@ -84,9 +85,25 @@ class Compare:
                 "",
             )
             if member.ebu in output:
-                self.duplicate_list.append(member)
+                self.duplicates_in_bbo.append(member)
                 # dup_member = output[member.ebu]
-                # self.duplicate_list.append(dup_member)
+                # self.duplicates_in_bbo.append(dup_member)
 
             output[member.ebu] = member
         return output
+
+    def create_include_from_members(self) -> None:
+        include_bbo = []
+
+        # some members don't have a BBO username on BridgeWebs db,
+        # so we need to check both dictionaries
+        for member in {**self.members_bbo, **self.members_ebu}.values():
+            if member.ebu in self.members_ebu:
+                status = self.members_ebu[member.ebu].status
+
+            if member.bbo and status == "Member":
+                include_bbo.append(member.bbo)
+
+        path = self.paths["BBO include"]
+        with open(path, "w", encoding="utf8") as f_include:
+            f_include.write("\n".join(sorted(include_bbo)))

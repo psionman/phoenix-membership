@@ -158,8 +158,6 @@ class AppFrame:
         )
         if members_file:
             self.members_file.set(members_file)
-            self.data_file.content["members_file"] = members_file
-            self.data_file.write()
 
     def _get_bbo_include_file(self, *args) -> None:
         initialfile = self.include_list_file.get()
@@ -173,8 +171,6 @@ class AppFrame:
         )
         if include_list_file:
             self.include_list_file.set(include_list_file)
-            self.data_file.content["include_list_file"] = include_list_file
-            self.data_file.write()
 
     def _get_bbo_names_file(self, *args) -> None:
         initialfile = self.bbo_names_file.get()
@@ -188,8 +184,6 @@ class AppFrame:
         )
         if bbo_names_file:
             self.bbo_names_file.set(bbo_names_file)
-            self.data_file.content["bbo_names_file"] = bbo_names_file
-            self.data_file.write()
 
     def _process(self, *args) -> None:
         paths = {
