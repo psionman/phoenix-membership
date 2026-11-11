@@ -7,10 +7,11 @@ from psiutils.constants import PAD
 from psiutils.treeview import sort_treeview
 from psiutils.utilities import restore_geometry, window_resize
 
+from members_files.bbo_session import BboSession
 from members_files.buttons import ButtonFrame, IconButton
+from members_files.compare import Compare
 from members_files.config import config
 from members_files.constants import APP_TITLE
-from members_files.process import Compare
 from members_files.state import state
 from members_files.text import Text
 
@@ -114,6 +115,11 @@ class ReportFrame:
             frame, txt.COPY, "copy-clipboard", self._copy_include, True
         )
         self.copy_include_button.grid(row=row, column=1, padx=PAD, sticky=tk.N)
+
+        upload_button = IconButton(
+            frame, txt.UPLOAD, "upload", self._upload_include
+        )
+        upload_button.grid(row=row, column=2, padx=PAD, sticky=tk.N)
 
         self.copy_include_button.disable()
         self._populate_include_tree()
@@ -354,7 +360,10 @@ class ReportFrame:
         # self._populate_duplicate_tree()
         pass
 
-    def _process(self, *args) -> None: ...
+    def _upload_include(self, *args) -> None:
+        bbo = BboSession()
+        bbo.upload_include_list(self.paths["BBO include"])
+        self.parent.root.destroy()
 
     def _save_sashes(self) -> None:
         horizontal_sashes = [

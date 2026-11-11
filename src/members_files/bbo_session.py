@@ -1,25 +1,21 @@
 import os
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from dotenv import load_dotenv
 from playwright.sync_api import (
     Error as PlaywrightError,
 )
-from playwright.sync_api import Page, expect, sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import expect
 
+from members_files.bbo_phoenix import BboPhoenixSession
 from members_files.constants import DOWNLOADS_DIR
-
-load_dotenv()
 
 BBO_USERNAME = os.getenv("BBO_USERNAME")
 BBO_PASSWORD = os.getenv("BBO_PASSWORD")
-COOKIE_TIMEOUT = 1000
-COOKIE_BUTTON = re.compile(r"accept|agree|allow", re.IGNORECASE)
-BBO_SESSIONS_URL = "https://www.bridgebase.com/v3/auth/login"
-SESSION_FILE = Path("bbo_session.json")
+
+UPLOAD_ACTION = "add"
+DOWNLOAD_ACTION = "dw"
 
 
 class WebSessionError(Exception):
@@ -35,22 +31,9 @@ class SessionConfig:
     charge_rate: str
 
 
-class BboSession:
+class BboSession(BboPhoenixSession):
     def __init__(self, headless: bool = False) -> None:
-        self._playwright = sync_playwright().start()
-        self.logged_in = False
-        self._browser = self._playwright.chromium.launch(headless=headless)
-        try:
-            self._context = self._browser.new_context(
-                viewport={"width": 1700, "height": 900}
-            )
-            self.page = self._context.new_page()
-        except PlaywrightError:
-            self._playwright.stop()
-            raise
-
-        cdp = self._context.new_cdp_session(self.page)
-        cdp.send("Emulation.setPageScaleFactor", {"pageScaleFactor": 0.75})
+        super().__init__(headless=headless)
 
     def is_alive(self) -> bool:
         """True while the browser window is still open and responding."""
@@ -60,81 +43,11 @@ class BboSession:
         except PlaywrightError:
             return False
 
-    def close(self) -> None:
-        """Close everything; safe to call more than once."""
-        for step in (
-            self._context.close,
-            self._browser.close,
-            self._playwright.stop,
-        ):
-            try:
-                step()
-            except PlaywrightError:
-                pass  # Already closed, for example by you
-
-    def _login(self) -> None:
-        page = self.page
-        if self.logged_in:
-            return
-        try:
-            page.goto(
-                BBO_SESSIONS_URL, wait_until="domcontentloaded", timeout=30000
-            )
-            page.locator("#username").wait_for(timeout=15000)
-        except PlaywrightTimeoutError as error:
-            self.close()
-            raise WebSessionError(
-                "BBO did not load in time. Check your connection and "
-                "try again."
-            ) from error
-        except PlaywrightError as error:
-            self.close()
-            raise WebSessionError(f"Could not reach BBO: {error}") from error
-
-        accept_cookies(page)
-
-        self._enter_credentials(BBO_USERNAME, BBO_PASSWORD)
-        page.wait_for_url(lambda url: "/auth/login" not in url)
-        page.add_style_tag(content="body { zoom: 75%; }")
-        self._context.storage_state(path=SESSION_FILE)
-
-        self.logged_in = True
-
-    def _enter_credentials(self, username: str, password: str) -> None:
-        page = self.page
-        page.locator("#username").fill(username)
-        page.locator("#password").fill(password)
-        page.locator("#password").press("Enter")
-
     def download_include_list(self) -> None:
         """Download the include list from BBO."""
-        self._login()
         page = self.page
-        page.on(
-            "dialog",
-            lambda d: (
-                print(f"dialog [{d.type}]: {d.message}", flush=True),
-                d.accept(),
-            ),
-        )
-
-        page.locator("tab-bar-button:visible").filter(
-            has_text="Director"
-        ).click()
-        page.get_by_role("button", name="Include/Exclude Lists").click()
-        page.get_by_role("button", name="Manage List").click()
-
-        frame = page.locator("modal-content iframe").content_frame
-        username = frame.get_by_role("textbox", name="Username:")
-        password = frame.get_by_role("textbox", name="Password:")
-        execute = frame.locator("#submit")
-        username.wait_for(timeout=10000)
-
-        # Type without clicking: a table cell covers the boxes
-        username.press_sequentially(BBO_USERNAME, delay=30)
-        password.press_sequentially(BBO_PASSWORD, delay=30)
-        frame.get_by_label("Type:").select_option("include")
-        frame.get_by_label("Action:").select_option("dw")
+        execute, frame, username, password = self._login_for_include_lists()
+        frame.get_by_label("Action:").select_option(DOWNLOAD_ACTION)
 
         try:
             expect(execute).to_be_enabled(timeout=3000)
@@ -172,14 +85,86 @@ class BboSession:
         print(f"Saved {target}", flush=True)
         self.close()
 
+    def upload_include_list(self, file_path: Path) -> None:
+        """Upload `file_path` as the include list on BBO."""
+        if not Path(file_path).exists():
+            raise FileNotFoundError(file_path)
 
-def accept_cookies(page: Page) -> None:
-    """Click the cookie consent button if one appears."""
-    button = page.get_by_role("button", name=COOKIE_BUTTON).first
-    try:
-        button.click(timeout=COOKIE_TIMEOUT)
-    except PlaywrightTimeoutError:
-        pass  # No banner this time
+        page = self.page
+        execute, frame, username, password = self._login_for_include_lists()
+        frame.get_by_label("Action:").select_option(UPLOAD_ACTION)
+
+        # The file box may only appear once the action is chosen
+        file_input = frame.locator('input[type="file"]')
+        try:
+            file_input.wait_for(state="attached", timeout=5000)
+        except PlaywrightTimeoutError:
+            print("No file box on the form. It contains:", flush=True)
+            for html in frame.locator("input, select").evaluate_all(
+                "els => els.map(e => e.outerHTML.slice(0, 160))"
+            ):
+                print("  ", html, flush=True)
+            page.screenshot(path="include_list.png")
+            return
+        file_input.set_input_files(file_path)
+
+        try:
+            expect(execute).to_be_enabled(timeout=3000)
+        except AssertionError:
+            # Nudge the form's own scripts with the events they listen for
+            for box in (username, password):
+                for event in ("input", "keyup", "change", "blur"):
+                    box.dispatch_event(event)
+            try:
+                expect(execute).to_be_enabled(timeout=3000)
+            except AssertionError:
+                print("Execute is still disabled. Form state:", flush=True)
+                for html in frame.locator("input, select").evaluate_all(
+                    "els => els.map(e => e.outerHTML.slice(0, 160))"
+                ):
+                    print("  ", html, flush=True)
+                print(frame.locator("body").inner_text()[:500], flush=True)
+                page.screenshot(path="include_list.png")
+                return
+
+        print("About to click Execute", flush=True)
+        # A script click avoids the covering cell
+        execute.evaluate("el => el.click()")
+
+        page.wait_for_timeout(2000)
+        print("BBO replied:", flush=True)
+        print(frame.locator("body").inner_text()[:800], flush=True)
+        self.close()
+
+    def _login_for_include_lists(self) -> None:
+        self._login()
+        page = self.page
+        page.on(
+            "dialog",
+            lambda d: (
+                print(f"dialog [{d.type}]: {d.message}", flush=True),
+                d.accept(),
+            ),
+        )
+
+        page.locator("tab-bar-button:visible").filter(
+            has_text="Director"
+        ).click()
+        page.get_by_role("button", name="Include/Exclude Lists").click()
+        page.get_by_role("button", name="Manage List").click()
+
+        frame = self.page.locator("modal-content iframe").content_frame
+
+        username = frame.get_by_role("textbox", name="Username:")
+        password = frame.get_by_role("textbox", name="Password:")
+        execute = frame.locator("#submit")
+        username.wait_for(timeout=10000)
+
+        # Type without clicking: a table cell covers the boxes
+        username.press_sequentially(BBO_USERNAME, delay=30)
+        password.press_sequentially(BBO_PASSWORD, delay=30)
+        frame.get_by_label("Type:").select_option("include")
+        return execute, frame, username, password
 
 
 def get_bbo_session(
