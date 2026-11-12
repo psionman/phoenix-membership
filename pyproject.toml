@@ -1,5 +1,5 @@
 [project]
-name = "members_files"
+name = "Maintain members' files for Phoenix"
 version = "0.0.0"
 authors = [
     { name = "Jeff Watkins", email = "jeffwatkins2000@gmail.com" },
