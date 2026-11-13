@@ -1,10 +1,10 @@
 [project]
-name = "Maintain members' files for Phoenix"
+name = "members_files"
 version = "0.0.0"
 authors = [
     { name = "Jeff Watkins", email = "jeffwatkins2000@gmail.com" },
 ]
-description = "Clean up Member's files"
+description = "Maintain membership files for Phoenix"
 readme = "README.md"
 requires-python = ">=3.13.3"
 

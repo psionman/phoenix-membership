@@ -1,10 +1,11 @@
 """Module caller for Phoenix Members Files."""
 
-import tkinter as tk
+from datetime import datetime
 
 from data_files import DataFile
 from psiutils.module_caller import ModuleCaller as ModuleCallerBase
 
+from members_files.config import config
 from members_files.forms.frm_config import ConfigFrame
 from members_files.forms.frm_report import ReportFrame
 
@@ -37,18 +38,18 @@ class ModuleCaller(ModuleCallerBase):
         self.data_file = DataFile()
         self.data_file.read()
 
-        member_file = ""
-        bbo_include_file = ""
-        bbo_names_file = ""
-        if "member_file" in self.data_file.content:
-            member_file = self.data_file.content["member_file"]
-        if "bbo_include_file" in self.data_file.content:
-            bbo_include_file = self.data_file.content["bbo_include_file"]
-        if "bbo_names_file" in self.data_file.content:
-            bbo_names_file = self.data_file.content["bbo_names_file"]
+        members_file = config.members_file
+        members_file = members_file.replace(
+            "YYYYMMDD", datetime.now().strftime("%Y%m%d")
+        )
 
-        self.member_file = tk.StringVar(value=member_file)
-        self.bbo_include_file = tk.StringVar(value=bbo_include_file)
-        self.bbo_names_file = tk.StringVar(value=bbo_names_file)
-        dlg = ReportFrame(self)
+        bbo_names_file = config.bbo_names_file
+        include_list_file = config.include_list_file
+
+        paths = {
+            "Membership": members_file,
+            "BBO include": include_list_file,
+            "BBO names": bbo_names_file,
+        }
+        dlg = ReportFrame(self, paths)
         self.root.wait_window(dlg.root)

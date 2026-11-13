@@ -10,7 +10,6 @@ from psiutils.utilities import restore_geometry, window_resize
 from members_files.bbo_session import BboSession
 from members_files.buttons import ButtonFrame, IconButton
 from members_files.compare import Compare
-from members_files.config import config
 from members_files.constants import APP_TITLE
 from members_files.state import state
 from members_files.text import Text
@@ -68,8 +67,8 @@ class ReportFrame:
             row=1, column=0, sticky=tk.EW, padx=PAD, pady=PAD
         )
 
-        if config.horizontal_sashes:
-            for index, sash in enumerate(config.horizontal_sashes):
+        if state.horizontal_sashes:
+            for index, sash in enumerate(state.horizontal_sashes):
                 self.main_frame.sash_place(index, 0, sash[1])
 
         sizegrip = ttk.Sizegrip(root)
@@ -104,25 +103,35 @@ class ReportFrame:
 
         row = 0
         label = ttk.Label(frame, text="Members missing from include")
-        label.grid(row=row, column=0, sticky=tk.W, padx=PAD, pady=PAD)
+        label.grid(row=row, column=0, padx=PAD, pady=PAD)
 
         row += 1
         frame.rowconfigure(row, weight=1)
         self.include_tree = self._get_include_tree(frame)
-        self.include_tree.grid(row=row, column=0, sticky=tk.NSEW)
+        self.include_tree.grid(row=row, column=0, rowspan=2, sticky=tk.NSEW)
 
+        button_frame = self._include_button_frame(frame)
+        button_frame.grid(row=row, column=1, padx=PAD, sticky=tk.N)
+
+        self._populate_include_tree()
+        return frame
+
+    def _include_button_frame(self, master: tk.Frame) -> tk.Frame:
+        frame = ttk.Frame(master)
+        frame.columnconfigure(0, weight=1)
+
+        row = 0
         self.copy_include_button = IconButton(
             frame, txt.COPY, "copy-clipboard", self._copy_include, True
         )
-        self.copy_include_button.grid(row=row, column=1, padx=PAD, sticky=tk.N)
+        self.copy_include_button.grid(row=row, column=1, sticky=tk.W)
 
+        row += 1
         upload_button = IconButton(
             frame, txt.UPLOAD, "upload", self._upload_include
         )
-        upload_button.grid(row=row, column=2, padx=PAD, sticky=tk.N)
-
+        upload_button.grid(row=row, column=1, pady=PAD, sticky=tk.W)
         self.copy_include_button.disable()
-        self._populate_include_tree()
         return frame
 
     def _bbo_frame(self, master: tk.Frame) -> tk.Frame:
@@ -131,7 +140,7 @@ class ReportFrame:
 
         row = 0
         label = ttk.Label(frame, text="Members missing from bbo_names")
-        label.grid(row=row, column=0, sticky=tk.W, padx=PAD, pady=PAD)
+        label.grid(row=row, column=0, padx=PAD, pady=PAD)
 
         row += 1
         frame.rowconfigure(row, weight=1)
@@ -152,7 +161,7 @@ class ReportFrame:
 
         row = 0
         label = ttk.Label(frame, text="Members duplicated in bbo_names")
-        label.grid(row=row, column=0, sticky=tk.W, padx=PAD, pady=PAD)
+        label.grid(row=row, column=0, padx=PAD, pady=PAD)
 
         row += 1
         frame.rowconfigure(row, weight=1)
@@ -368,10 +377,10 @@ class ReportFrame:
     def _save_sashes(self) -> None:
         horizontal_sashes = [
             self.main_frame.sash_coord(index)
-            for index in range(len(config.horizontal_sashes))
+            for index in range(len(state.horizontal_sashes))
         ]
-        config.update("horizontal_sashes", horizontal_sashes)
-        config.save()
+        state.horizontal_sashes = horizontal_sashes
+        state.save()
 
     def _dismiss(self, *args) -> None:
         self._save_sashes()

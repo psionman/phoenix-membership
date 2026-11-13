@@ -16,6 +16,7 @@ DEFAULT_GEOMETRY = {
 class State:
     def __init__(self):
         self.geometry: dict[str, str] = {}
+        self.horizontal_sashes: list[tuple[int, int]] = [[], []]
 
         self.get_state()
 
@@ -29,10 +30,12 @@ class State:
         self.geometry = data.get("geometry", DEFAULT_GEOMETRY)
         if not self.geometry:
             self.geometry = DEFAULT_GEOMETRY
+        self.horizontal_sashes = data.get("horizontal_sashes", [[], []])
 
     def serialize(self):
         return {
             "geometry": self.geometry,
+            "horizontal_sashes": self.horizontal_sashes,
         }
 
     def save(self):
